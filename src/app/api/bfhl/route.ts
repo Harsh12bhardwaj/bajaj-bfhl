@@ -26,6 +26,7 @@ export async function POST(req: Request) {
     const duplicate_edges: string[] = [];
     const valid_edges: string[] = [];
     const seen_edges = new Set<string>();
+    const seen_duplicates = new Set<string>();
 
     // 1. Validation & Duplicates
     for (const entry of data) {
@@ -35,11 +36,18 @@ export async function POST(req: Request) {
       }
 
       const trimmed = entry.trim();
-      if (!/^[A-Z]->[A-Z]$/.test(trimmed)) {
+      // Regex checks X->Y format; additionally reject self-loops (A->A)
+      const isValidFormat = /^[A-Z]->[A-Z]$/.test(trimmed) && trimmed[0] !== trimmed[3];
+
+      if (!isValidFormat) {
         invalid_entries.push(entry);
       } else {
         if (seen_edges.has(trimmed)) {
-          duplicate_edges.push(trimmed);
+          // Only add to duplicate_edges once per unique edge, regardless of repetition count
+          if (!seen_duplicates.has(trimmed)) {
+            duplicate_edges.push(trimmed);
+            seen_duplicates.add(trimmed);
+          }
         } else {
           seen_edges.add(trimmed);
           valid_edges.push(trimmed);
